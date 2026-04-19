@@ -11,7 +11,9 @@
       "Bash(.venv/bin/pip install *)",
       "Bash(python3 -c \"import json; nb=json.load\\(open\\('/Users/ahnsebin/Documents/GeorgiaTech/Spring26/GTSF IC/project/src/IC_Quant_Project.ipynb'\\)\\); print\\(len\\(nb['cells']\\)\\)\")",
       "Bash(cat)",
-      "Bash(python3 /tmp/cleanup_nb.py)"
+      "Bash(python3 /tmp/cleanup_nb.py)",
+      "Bash(ls .venv/bin/python*)",
+      "Bash(.venv/bin/python -c \"import ipykernel; print\\('ipykernel OK'\\)\")"
     ]
   }
 }
