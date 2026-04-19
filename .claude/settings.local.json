@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Bash(.venv/bin/pip show *)",
+      "WebSearch",
+      "Bash(python3)",
+      "Bash(.venv/bin/python3)",
+      "WebFetch(domain:fred.stlouisfed.org)",
+      "WebFetch(domain:alfred.stlouisfed.org)",
+      "Bash(.venv/bin/pip install *)",
+      "Bash(python3 -c \"import json; nb=json.load\\(open\\('/Users/ahnsebin/Documents/GeorgiaTech/Spring26/GTSF IC/project/src/IC_Quant_Project.ipynb'\\)\\); print\\(len\\(nb['cells']\\)\\)\")",
+      "Bash(cat)",
+      "Bash(python3 /tmp/cleanup_nb.py)"
+    ]
+  }
+}

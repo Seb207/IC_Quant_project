@@ -1,0 +1,24 @@
+# Credentials
+src/refinitiv-data.config.json
+src/secrets.json
+.env
+
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# Data files (large / raw)
+data/interim/
+data/raw/
+
+# Trained model artifacts
+models/
+
+# Jupyter checkpoints
+*.ipynb_checkpoints
