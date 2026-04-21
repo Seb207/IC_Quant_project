@@ -1,136 +1,283 @@
-# VSN-LSTM Multi-Asset Return Predictor
+# VSN-LSTM Multi-Asset Return Predictor (v2)
 
-A hybrid deep learning framework for predicting $t+1$ daily log returns of multi-asset classes (Equity, Bonds, Commodities) using **Variable Selection Networks (VSN)** and **Long Short-Term Memory (LSTM)**.
+A hybrid deep learning framework for predicting **t+1 daily log returns** of four major asset classes using **Variable Selection Networks (VSN)** and **Long Short-Term Memory (LSTM)**.
+
+---
 
 ## 1. Project Overview
-This project is currently being developed in `src/IC_Quant_Project.ipynb` as a notebook-first pipeline.
 
-The target design is an end-to-end quantitative workflow that:
-- Captures dynamic market regimes using VSN-based feature gating.
-- Learns long-term temporal dependencies through LSTM.
-- Addresses high-dimensional noise and multi-collinearity via a dual-stage feature selection process.
-- Strictly follows professional backtesting protocols (Expanding Window, Purging/Embargo).
+`IC_Quant_Project_v2.ipynb` implements a complete end-to-end quantitative pipeline:
 
-### Current Status Snapshot
-- **Implemented in notebook**: Data acquisition, preprocessing/transformation, technical feature engineering, dual-stage feature selection.
-- **In progress / pending**: VSN embedding, LSTM training, walk-forward validation, and backtesting.
+- **Dynamic feature gating** via VSN-based Gated Residual Networks (GRN), which adaptively suppress uninformative features on a per-sample basis.
+- **Temporal dependency modelling** through a stacked LSTM encoder.
+- **Noise reduction** via a dual-stage feature selection process (Spearman clustering → XGBoost ranking).
+- **Leak-free training** using Expanding Window Walk-Forward Validation with Purging and Embargo.
+- **Automated hyperparameter search** using Optuna TPE sampler (30 trials).
+- **Causal normalisation** using an expanding-window StandardScaler that prevents look-ahead bias.
 
----
+### Target Assets
 
-## 2. Data Sources & Factor Universe
+| Ticker | Asset Class | Description |
+|---|---|---|
+| `SPY` | Equity | S&P 500 ETF |
+| `TLT.O` | Fixed Income | 20+ Year Treasury Bond ETF |
+| `GLD` | Commodity | Gold ETF |
+| `XLE` | Commodity | Energy Sector ETF |
 
-### A. Target Assets (Refinitiv Data API)
-- **Equity**: `SPY` (S&P 500 ETF)
-- **Fixed Income**: `TLT.O` (20+ Yr Treasury Bond ETF)
-- **Commodity**: `GLD` (Gold ETF), `XLE` (Energy Sector ETF)
-
-### B. Auxiliary Market Input (Refinitiv)
-- **USD Regime Proxy (non-target feature)**: `.DXY` (used as explanatory input only, not a prediction target)
-
-### C. Macro & Alternative Indicators (FRED API)
-- **Macro Factors**:
-    - Term Spread: `T10Y2Y` (10Y-2Y Treasury)
-    - Credit Spread: `BAA10Y` (Moody's BAA - 10Y Treasury)
-    - Breakeven Inflation: `T10YIE` (10Y Breakeven)
-- **Alternative & Tail-Risk Indicators**:
-    - Volatility (Magnitude): `VIXCLS` (CBOE VIX)
-    - Gold Spot: `NASDAQXAU` (Gold Price)
-    - WTI Crude: `DCOILWTICO` (WTI Oil)
-
-### D. Acquisition Progress (Implemented)
-- Refinitiv and FRED fetch functions are operational in `src/IC_Quant_Project.ipynb`.
-- Per-ticker status logging is enabled (`Fetching`, `OK`, `EMPTY`, `FAIL`) with row count and date range.
-- Data alignment uses Refinitiv trading dates as the base index, with macro series merged and forward-filled.
-
-### E. Technical Indicators (Derived from Refinitiv OHLCV)
-- **Trend/Momentum**: 
-    - **MACD**: $EMA_{12}(P) - EMA_{26}(P)$
-    - **Returns**: 1D, 5D, and 20D Log Returns.
-- **Oscillator**: 
-    - **RSI (14-Day)**: Relative Strength Index.
-- **Risk**: 
-    - **Rolling Volatility**: 20-Day annualized standard deviation of log returns.
+**Prediction target**: $y_t = \ln(P_{t+1} / P_t)$ — next-day log return for each asset, trained independently.
 
 ---
 
-## 3. Preprocessing & Feature Engineering
+## 2. Data Sources
 
-### Progress Status
-- **Implemented in notebook**: Macro transformation (`level` + `diff` or log return), technical indicators, and per-target dataset construction.
-- **Implemented in notebook**: Data export for each target dataset into `data/`.
-- **Pending hardening**: Leakage-safe scaling inside walk-forward folds.
-- `DXY_logret` is currently treated as an auxiliary input feature and is not included in target prediction labels.
+### A. Market Data — Refinitiv Data API
+- `SPY`, `TLT.O`, `GLD`, `XLE`, `.DXY` — daily OHLCV
+- Fields: `TR.PriceOpen`, `TR.PriceHigh`, `TR.PriceLow`, `TR.PriceClose`, `TR.Volume`
+- Date range: `2000-01-01` → present
 
-### A. Transformation Logic
-Features are transformed based on their nature to preserve both momentum and regime information:
+### B. Macro & Alternative Indicators — FRED API
 
-| Feature Type | Transformation (for Correlation) | Transformation (for Model Input) |
-| :--- | :--- | :--- |
-| **Asset Prices** | Log Return ($\ln(P_t/P_{t-1})$) | Log Return |
-| **Spreads/VIX/Rates** | 1st-order Difference ($\Delta X_t$) | **Both `Level` AND `diff()`** |
-| **Commodity Spot Series** | Log Return | Log Return |
+| FRED Series | Column Name | Transformation |
+|---|---|---|
+| `T10Y2Y` | `Term_Spread` | Level + First-difference |
+| `BAA10Y` | `Credit_Spread` | Level + First-difference |
+| `T10YIE` | `Breakeven_Inflation` | Level + First-difference |
+| `VIXCLS` | `VIX` | Level + First-difference |
+| `NASDAQXAU` | `Gold_Spot` | Log-return |
+| `DCOILWTICO` | `WTI_Crude` | Log-return |
 
-*Note: Current notebook version tracks VIX levels/differences and commodity spot log returns; additional stress indicators can be reintroduced later if needed.*
-
-### B. Technical Engineering Details
-- **Alignment**: Align all FRED data to Refinitiv trading days using **Forward Fill (`ffill`)**.
-- **Scaling**: Apply `RobustScaler` (Median/IQR) to handle fat-tails and outliers in financial time series.
+`.DXY` is additionally included as `DXY_logret` (log-return, non-target feature).
 
 ---
 
-## 4. Dual-Stage Feature Selection (Per Target)
+## 3. Feature Engineering
 
-### Progress Status
-- **Implemented in notebook**: Stage 1 (Spearman + hierarchical clustering) and Stage 2 (XGBoost importance ranking).
-- **Current output**: Target-wise selected feature lists.
-- **Pending**: Moving selection into walk-forward folds to eliminate look-ahead bias.
+### Technical Indicators (Per Target Asset)
 
-### Stage 1: Redundancy Filter (Spearman + Clustering)
-- **Goal**: Prevent weight dilution in VSN by removing overlapping signals (e.g., VIX vs SKEW vs Credit Spread).
-- **Process**: 
-    1. Calculate Spearman Rank Correlation on stationary data.
-    2. Perform Hierarchical Clustering (Ward's Linkage).
-    3. Retain the feature with the highest absolute IC relative to the target if Correlation $> 0.90$.
+| Feature | Formula | Purpose |
+|---|---|---|
+| `ret_1d` | $\ln(P_t / P_{t-1})$ | 1-day momentum |
+| `ret_5d` | $\ln(P_t / P_{t-5})$ | Weekly momentum |
+| `ret_20d` | $\ln(P_t / P_{t-20})$ | Monthly momentum |
+| `macd` | $EMA_{12}(P) - EMA_{26}(P)$ | Trend signal |
+| `rsi_14` | Wilder RSI, $\alpha = 1/14$ | Overbought/oversold |
+| `vol_20d` | $\sigma_{20}(\text{ret\_1d}) \times \sqrt{252}$ | Annualised volatility |
 
-### Stage 2: Relevance Filter (XGBoost Screening)
-- **Process**: 
-    1. Train a shallow XGBoost Regressor on the training set.
-    2. Select Top $K$ features based on **Information Gain**.
+Each asset contributes 6 technical features, prefixed with the ticker name (e.g., `SPY_ret_1d`).
+
+### Macro Features
+- **Level + diff**: `Term_Spread`, `Credit_Spread`, `Breakeven_Inflation`, `VIX` — 8 features (4 level + 4 diff)
+- **Log-return**: `Gold_Spot`, `WTI_Crude`, `DXY` — 3 features
+- Total macro features: **11**
+
+### Combined Feature Space (Before Selection)
+Each target dataset contains ~17 features (6 technical + 11 macro) before the dual-stage selection.
 
 ---
 
-## 5. Model Architecture: VSN + LSTM
+## 4. Dual-Stage Feature Selection
 
-### Status: Planned (Not Implemented Yet)
-- VSN and LSTM sections are scaffolded in the notebook, but model code is not finalized.
-- Next milestone is integrating selected features into a leak-free train/validation pipeline.
+Feature selection is performed **once** on the initial 5-year training period and the resulting `feat_cols` are applied globally across all walk-forward folds (no per-fold re-selection).
+
+### Stage 1 — Redundancy Filter (Spearman + Ward Clustering)
+1. Compute pairwise absolute Spearman correlation matrix.
+2. Convert to distance matrix: $d_{ij} = 1 - |\rho_{ij}|$.
+3. Apply Ward hierarchical linkage; cut at $1 - 0.90 = 0.10$.
+4. Within each cluster, retain the single feature with the highest absolute Spearman IC against the target.
+
+### Stage 2 — Relevance Filter (XGBoost Importance)
+1. Fit a shallow XGBoost regressor (`max_depth=3`, `n_estimators=100`) on Stage 1 output.
+2. Rank features by `feature_importances_` (information gain).
+3. Retain **Top-K = 12** features.
+
+---
+
+## 5. Model Architecture
 
 ### Variable Selection Network (VSN)
-- Employs **Gated Residual Networks (GRN)** for each feature.
-- Dynamically calculates Softmax-weighted feature importance at each timestamp $t$.
+Each of the 12 selected features is independently projected through its own **Gated Residual Network (GRN)**:
 
-### LSTM
-- Processes the gated sequence to learn non-linear temporal patterns.
-- Hidden Layers and Dropout rates are optimized via the Validation set.
+$$\text{GRN}(x) = \text{LayerNorm}\bigl(a \cdot \sigma(b) + \text{skip}(x)\bigr)$$
 
----
+where $a, b = \text{split}(\text{gate}(\text{dropout}(\text{fc}_2(\text{ELU}(\text{fc}_1(x))))))$.
 
-## 6. Validation & Backtesting
-### Status: Planned (Not Implemented Yet)
-- **Data Range**: January 2000 – Present.
-- **Protocol**: **Expanding Window Walk-Forward Validation**.
-- **Leakage Control**: 
-    - **Purging**: Remove training samples overlapping with the test period.
-    - **Embargo**: Skip samples immediately following the test period to account for autocorrelation.
+A separate GRN produces a **softmax attention weight** over the 12 feature embeddings, yielding a context vector that adaptively suppresses regime-irrelevant signals.
 
-Current notebook execution has not yet implemented full walk-forward training/evaluation outputs.
+### LSTM Encoder
+Processes the context sequence of length `LOOKBACK = 20` trading days and uses the **final hidden state** as the sequence representation.
+
+### Linear Head
+Maps the LSTM hidden state to a scalar $\hat{y}_t$ (predicted log return).
+
+### Full Forward Pass
+$$x \xrightarrow{\text{VSN}} \text{context}_{1:T} \xrightarrow{\text{LSTM}} h_T \xrightarrow{\text{Linear}} \hat{y}$$
 
 ---
 
-## 7. Development Roadmap
-- [x] **Task 1 (Notebook)**: Data acquisition from Refinitiv + FRED with ticker-level logging.
-- [x] **Task 2 (Notebook)**: Preprocessing and feature engineering (macro transforms + technical indicators).
-- [x] **Task 3 (Notebook)**: Dual-stage feature selection (Spearman clustering + XGBoost ranking).
-- [ ] **Task 4 (Next)**: Walk-forward, leakage-safe feature selection and scaling.
-- [ ] **Task 5 (Next)**: VSN + LSTM implementation and model training.
-- [ ] **Task 6 (Next)**: Validation, backtesting, and performance reporting.
+## 6. Training Protocol
+
+### Walk-Forward Validation (Expanding Window)
+
+```
+fold 1:  [─────── train (5yr) ───────][embargo][─ test 60d ─]
+fold 2:  [──────── train (5yr+60d) ────────][embargo][─ test 60d ─]
+fold 3:  [─────────── train (5yr+120d) ────────────][embargo][─ test 60d ─]
+...
+```
+
+| Parameter | Value |
+|---|---|
+| `INITIAL_TRAIN_YEARS` | 5 |
+| `TEST_SIZE` | 60 trading days (~1 quarter) |
+| `EMBARGO` | 20 days (= LOOKBACK) |
+| `LOOKBACK` | 20 days |
+
+### Hyperparameter Optimisation (Optuna)
+- **Sampler**: TPE (Tree-structured Parzen Estimator)
+- **Trials**: 30 (tuned on `fold[0]` only)
+- **Objective**: MSE on fold-0 validation set
+- **Budget per trial**: 15 epochs
+
+| Hyperparameter | Search Space |
+|---|---|
+| `vsn_hidden_dim` | {16, 32, 64} |
+| `lstm_hidden_dim` | {16, 32, 64, 128} |
+| `lstm_num_layers` | {1, 2} |
+| `lstm_dropout` | [0.0, 0.3] |
+| `vsn_dropout` | [0.0, 0.3] |
+| `lr` | [1e-4, 5e-3] log-uniform |
+| `batch_size` | {32, 64, 128} |
+
+### Training Details
+- **Loss**: `HuberLoss(delta=0.01)` — robust to return outliers
+- **Optimiser**: Adam
+- **Gradient clipping**: global norm ≤ 1.0
+- **Early stopping**: patience = 7 epochs
+- **Max epochs**: 50
+- **AMP**: bfloat16 on CUDA (`torch.amp.autocast`)
+- **Kernel fusion**: `torch.compile()` on CUDA
+
+### Causal Normalisation (Expanding Window StandardScaler)
+Training samples are standardised using only **past observations** (no look-ahead):
+- Samples 0 to `min_periods − 1`: warm-up, use stats of first 50 samples.
+- Sample $i \geq 50$: use cumulative mean and std of $X_{0:i}$.
+
+Test samples are scaled using the **full training set statistics**.
+
+---
+
+## 7. Persistence
+
+All artefacts are saved to a timestamped subdirectory under `../model/YYYYMMDD_HHMMSS/`:
+
+| File | Contents |
+|---|---|
+| `<ticker>_model.pt` | Model state-dict (PyTorch) |
+| `<ticker>_feats.json` | Selected feature column names |
+| `<ticker>_scaler.json` | Feature mean and std (JSON, no pickle) |
+| `<ticker>_params.json` | Best Optuna hyperparameters |
+| `<ticker>_preds.csv` | Out-of-sample predictions and ground truth |
+| `<ticker>_fold_history.csv` | Per-fold MSE and hit ratio |
+| `best_params.json` | Best params for all targets |
+| `feat_cols.json` | Selected features for all targets |
+| `summary.csv` | Overall walk-forward summary |
+
+---
+
+## 8. Evaluation
+
+### Validation Metrics
+
+| Metric | Description |
+|---|---|
+| MSE / MAE / RMSE | Regression error |
+| IC (Spearman) | Rank correlation of predictions with realised returns |
+| IC (Pearson) | Linear correlation of predictions with realised returns |
+| Hit Ratio | Fraction of correct directional predictions |
+
+### Backtesting
+- **Signal**: $\text{position}_t = \text{sign}(\hat{y}_t)$ — long (+1) or short (−1)
+- **Optional threshold**: zero out signals when $|\hat{y}_t| \leq \theta$
+- **Equity curve**: $\exp\!\bigl(\sum \text{ret}\bigr)$
+
+### Performance Metrics
+
+| Metric | Description |
+|---|---|
+| Total Return | Cumulative return over the test period |
+| CAGR | Compound Annual Growth Rate |
+| Annualised Volatility | $\sigma \times \sqrt{252}$ |
+| Sharpe Ratio | $\text{CAGR} / \sigma_{\text{ann}}$ (zero risk-free rate) |
+| Sortino Ratio | CAGR / downside volatility |
+| Max Drawdown | Peak-to-trough equity decline |
+| Calmar Ratio | CAGR / \|Max Drawdown\| |
+| Win Rate | Fraction of profitable days |
+
+---
+
+## 9. Inference
+
+After training, `predict_next()` generates a t+1 log-return forecast for a single asset using the latest `LOOKBACK = 20` rows of raw (unscaled) data:
+
+```python
+run_dir = "../model/YYYYMMDD_HHMMSS"
+loaded  = load_results(run_dir)
+
+pred, feat_weights = predict_next(
+    loaded["SPY"]["model"],
+    loaded["SPY"]["feat_mean"],
+    loaded["SPY"]["feat_std"],
+    loaded["SPY"]["feats"],
+    recent_data=datasets["SPY"].drop(columns=["target"]),
+)
+# pred         : float — predicted t+1 log return
+# feat_weights : dict  — mean VSN attention weight per feature
+```
+
+---
+
+## 10. File Structure
+
+```
+project/
+├── src/
+│   ├── IC_Quant_Project_v2.ipynb   # Main notebook (this version)
+│   ├── readme.md
+│   ├── refinitiv-data.config.json
+│   └── secrets.json
+├── data/
+│   ├── merged_daily.csv            # Raw merged market + macro data
+│   ├── SPY_dataset.csv             # Per-target feature datasets
+│   ├── TLT_O_dataset.csv
+│   ├── GLD_dataset.csv
+│   └── XLE_dataset.csv
+└── model/
+    └── YYYYMMDD_HHMMSS/            # Timestamped run directory
+        ├── SPY_model.pt
+        ├── SPY_feats.json
+        ├── SPY_scaler.json
+        ├── SPY_params.json
+        ├── SPY_preds.csv
+        ├── SPY_fold_history.csv
+        ├── best_params.json
+        ├── feat_cols.json
+        └── summary.csv
+```
+
+---
+
+## 11. Requirements
+
+```
+numpy < 2.0
+pandas < 2.2
+torch
+refinitiv-data
+fredapi
+optuna
+xgboost
+scikit-learn
+scipy
+matplotlib
+tqdm
+```

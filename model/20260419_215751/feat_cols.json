@@ -1,0 +1,58 @@
+{
+  "SPY": [
+    "VIX_diff",
+    "Breakeven_Inflation_level",
+    "VIX_level",
+    "SPY_macd",
+    "Breakeven_Inflation_diff",
+    "Credit_Spread_level",
+    "Term_Spread_level",
+    "SPY_ret_20d",
+    "WTI_Crude_logret",
+    "SPY_rsi_14",
+    "DXY_logret",
+    "SPY_ret_1d"
+  ],
+  "TLT.O": [
+    "Breakeven_Inflation_diff",
+    "DXY_logret",
+    "TLT.O_macd",
+    "TLT.O_ret_5d",
+    "Gold_Spot_logret",
+    "Breakeven_Inflation_level",
+    "TLT.O_ret_1d",
+    "TLT.O_rsi_14",
+    "Term_Spread_level",
+    "VIX_diff",
+    "Credit_Spread_level",
+    "TLT.O_ret_20d"
+  ],
+  "GLD": [
+    "Term_Spread_diff",
+    "Breakeven_Inflation_diff",
+    "GLD_ret_20d",
+    "GLD_macd",
+    "GLD_vol_20d",
+    "Breakeven_Inflation_level",
+    "VIX_level",
+    "DXY_logret",
+    "VIX_diff",
+    "GLD_ret_1d",
+    "WTI_Crude_logret",
+    "Credit_Spread_diff"
+  ],
+  "XLE": [
+    "Breakeven_Inflation_diff",
+    "VIX_level",
+    "XLE_ret_1d",
+    "Breakeven_Inflation_level",
+    "XLE_ret_5d",
+    "Credit_Spread_diff",
+    "XLE_vol_20d",
+    "WTI_Crude_logret",
+    "DXY_logret",
+    "XLE_macd",
+    "Credit_Spread_level",
+    "VIX_diff"
+  ]
+}

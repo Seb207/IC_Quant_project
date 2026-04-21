@@ -1,0 +1,9 @@
+{
+  "vsn_hidden_dim": 64,
+  "lstm_hidden_dim": 32,
+  "lstm_num_layers": 2,
+  "lstm_dropout": 0.06611308397679533,
+  "vsn_dropout": 0.10481977444471507,
+  "lr": 0.002335960437076757,
+  "batch_size": 32
+}

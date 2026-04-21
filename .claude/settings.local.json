@@ -16,7 +16,9 @@
       "Bash(.venv/bin/python -c \"import ipykernel; print\\('ipykernel OK'\\)\")",
       "Bash(python3 /tmp/make_transformer_v2.py)",
       "Bash(python3 -c \"import json; nb=json.load\\(open\\('/Users/ahnsebin/Documents/GeorgiaTech/Spring26/GTSF IC/project/src/IC_Quant_Project_v2.ipynb'\\)\\); print\\(len\\(nb['cells']\\)\\)\")",
-      "Bash(python3 -c \"import json; nb=json.load\\(open\\('/Users/ahnsebin/Documents/GeorgiaTech/Spring26/GTSF IC/project/src/IC_Quant_Project_v3.ipynb'\\)\\); print\\('cells:', len\\(nb['cells']\\)\\); print\\('valid JSON, nbformat:', nb.get\\('nbformat'\\)\\)\")"
+      "Bash(python3 -c \"import json; nb=json.load\\(open\\('/Users/ahnsebin/Documents/GeorgiaTech/Spring26/GTSF IC/project/src/IC_Quant_Project_v3.ipynb'\\)\\); print\\('cells:', len\\(nb['cells']\\)\\); print\\('valid JSON, nbformat:', nb.get\\('nbformat'\\)\\)\")",
+      "Read(//private/tmp/**)",
+      "Read(//Users/ahnsebin/Documents/GeorgiaTech/**)"
     ]
   }
 }
