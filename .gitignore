@@ -22,4 +22,11 @@ models/
 
 # Jupyter checkpoints
 *.ipynb_checkpoints
+
+# Claude
 /.claude/
+
+# Non-submission model notebooks (keep v2 only)
+src/IC_Quant_Project.ipynb
+src/IC_Quant_Project_v3.ipynb
+src/IC_Quant_Project_v4.ipynb
