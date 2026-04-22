@@ -1,4 +1,4 @@
-# VSN-LSTM Multi-Asset Return Predictor (v2)
+# VSN-LSTM Multi-Asset Return Predictor
 
 A hybrid deep learning framework for predicting **t+1 daily log returns** of four major asset classes using **Variable Selection Networks (VSN)** and **Long Short-Term Memory (LSTM)**.
 
@@ -269,8 +269,8 @@ project/
 ## 11. Requirements
 
 ```
-numpy < 2.0
-pandas < 2.2
+numpy < 2.0 (for refinitiv API only)
+pandas
 torch
 refinitiv-data
 fredapi

@@ -1,0 +1,38 @@
+{
+  "SPY": {
+    "vsn_hidden_dim": 64,
+    "lstm_hidden_dim": 128,
+    "lstm_num_layers": 1,
+    "lstm_dropout": 0.264369174997244,
+    "vsn_dropout": 0.15493922182445172,
+    "lr": 0.0029037876911906643,
+    "batch_size": 128
+  },
+  "TLT.O": {
+    "vsn_hidden_dim": 32,
+    "lstm_hidden_dim": 32,
+    "lstm_num_layers": 1,
+    "lstm_dropout": 0.2695232857060905,
+    "vsn_dropout": 0.18508841783986318,
+    "lr": 0.0027842466610096778,
+    "batch_size": 64
+  },
+  "GLD": {
+    "vsn_hidden_dim": 64,
+    "lstm_hidden_dim": 128,
+    "lstm_num_layers": 1,
+    "lstm_dropout": 0.22851285179766007,
+    "vsn_dropout": 0.25772797950149856,
+    "lr": 0.0009839265321182685,
+    "batch_size": 64
+  },
+  "XLE": {
+    "vsn_hidden_dim": 16,
+    "lstm_hidden_dim": 32,
+    "lstm_num_layers": 1,
+    "lstm_dropout": 0.10225571456167798,
+    "vsn_dropout": 0.06344005558987116,
+    "lr": 0.0005846271009606885,
+    "batch_size": 64
+  }
+}
