@@ -54,14 +54,14 @@ A hybrid deep learning framework for predicting **t+1 daily log returns** of fou
 
 ### Technical Indicators (Per Target Asset)
 
-| Feature | Formula | Purpose |
-|---|---|---|
-| `ret_1d` | $\ln(P_t / P_{t-1})$ | 1-day momentum |
-| `ret_5d` | $\ln(P_t / P_{t-5})$ | Weekly momentum |
-| `ret_20d` | $\ln(P_t / P_{t-20})$ | Monthly momentum |
-| `macd` | $EMA_{12}(P) - EMA_{26}(P)$ | Trend signal |
-| `rsi_14` | Wilder RSI, $\alpha = 1/14$ | Overbought/oversold |
-| `vol_20d` | $\sigma_{20}(\text{ret\_1d}) \times \sqrt{252}$ | Annualised volatility |
+| Feature | Formula                                        | Purpose |
+|---|------------------------------------------------|---|
+| `ret_1d` | $\ln(P_t / P_{t-1})$                           | 1-day momentum |
+| `ret_5d` | $\ln(P_t / P_{t-5})$                           | Weekly momentum |
+| `ret_20d` | $\ln(P_t / P_{t-20})$                          | Monthly momentum |
+| `macd` | $EMA_{12}(P) - EMA_{26}(P)$                    | Trend signal |
+| `rsi_14` | Wilder RSI, $\alpha = 1/14$                    | Overbought/oversold |
+| `vol_20d` | $\sigma_{20}(\text{ret_1d}) \times \sqrt{252}$ | Annualised volatility |
 
 Each asset contributes 6 technical features, prefixed with the ticker name (e.g., `SPY_ret_1d`).
 
